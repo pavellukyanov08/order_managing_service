@@ -1,0 +1,53 @@
+services:
+  app:
+    container_name: order_managing_service
+    build:
+      context: .
+    ports:
+      - "9999:80"
+    depends_on:
+      - db
+    restart: always
+    env_file:
+      - .env
+
+  db:
+    container_name: order_managing_service_db
+    image: postgres:latest
+    ports:
+      - "5429:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - order_managing_service_network
+    env_file:
+      - .env
+
+  redis:
+    image: redis:latest
+    container_name: order_managing_service_redis
+    ports:
+      - "6377:6379"
+    restart: always
+    volumes:
+      - order_managing_service_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./users.acl:/usr/local/etc/redis/users.acl
+    env_file:
+      - .env
+    networks:
+      - order_managing_service_network
+    command: ["redis-server",
+      "--user", "${REDIS_USER}", "on", ">${REDIS_PASSWORD}", "allcommands", "allkeys",
+      "--user", "default", "off",
+      "--port", "6379",
+      "--bind", "0.0.0.0",
+      "--protected-mode", "yes"]
+
+volumes:
+  order_managing_service_data:
+  postgres_data:
+
+networks:
+  order_managing_service_network:
+    driver: bridge
