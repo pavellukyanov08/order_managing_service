@@ -1,7 +1,8 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path, Body
+from fastapi import APIRouter, Path, Body, Depends
+from fastapi.security import HTTPBearer
 
 from app.settings import api_settings
 from .deps import OrderServiceDep
@@ -13,9 +14,11 @@ from app.schemas import (
 )
 from app.common.schemas import MessageDTO
 
+http_bearer = HTTPBearer(auto_error=False)
 
 router = APIRouter(
     prefix=api_settings.ORDERS_PREFIX,
+    dependencies=[Depends(http_bearer)],
 )
 
 
@@ -63,7 +66,7 @@ async def update_order(
     Update the order
     """
 
-    await service.update_order(updated_order=updated_order)
+    await service.update_order(data=updated_order)
     return MessageDTO(message="Заказ обновлен")
 
 

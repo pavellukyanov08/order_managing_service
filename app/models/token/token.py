@@ -1,7 +1,7 @@
 from typing import Self
 from app.utils.normalize_datetime import NormalizeDateTime
 from uuid import UUID
-from pydantic import model_validator, Field, BaseModel
+from pydantic import model_validator, Field
 from datetime import datetime
 
 from app.enums import TokenTypeEnum

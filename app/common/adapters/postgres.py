@@ -1,4 +1,3 @@
-import logging
 from typing import cast
 from uuid import UUID
 
@@ -7,10 +6,12 @@ from sqlalchemy import ColumnElement, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.enums import UserStatusEnum
+from app.utils import LoggerDep
 from app.models import User, Order
 from app.common.schemas import UserDTO
 from app.schemas import (
-    OrderRead, 
+    OrderRead,
     OrderUpdate,
     OrderCreate,
 )
@@ -21,7 +22,7 @@ class PostgresAdapter:
     def __init__(
         self,
         *,
-        logger: logging.Logger,
+        logger: LoggerDep,
         postgres_session: AsyncSession,
 
     ) -> None:
@@ -195,7 +196,7 @@ class PostgresAdapter:
         updated_order: OrderUpdate,
     ) -> None:
         try:
-            await self._postgres_session.execute(
+            order = await self._postgres_session.execute(
                 update(Order)
                 .where(Order.id == updated_order.id)
                 .values(
@@ -255,7 +256,7 @@ class PostgresAdapter:
                 update(User)
                 .where(User.sid == user_sid)
                 .values(
-                    is_active=False,
+                    status=UserStatusEnum.BLOCKED,
                     updated_at=DateTimeManager.get_now_utc(),
                 )
             )
@@ -282,7 +283,7 @@ class PostgresAdapter:
                 update(User)
                 .where(User.sid == user_sid)
                 .values(
-                    is_active=True,
+                    status=UserStatusEnum.ACTIVE,
                     updated_at=DateTimeManager.get_now_utc(),
                 )
             )

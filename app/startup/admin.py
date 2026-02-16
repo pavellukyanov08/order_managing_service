@@ -3,7 +3,6 @@ from logging import Logger
 from app.common.adapters import PostgresAdapter
 from app.common.schemas import UserDTO
 from app.core.auth import password_manager
-from app.schemas.wallet import WalletCreate
 from app.settings.startup import startup_settings
 from app.utils import DateTimeManager
 
@@ -28,9 +27,6 @@ class AdminStartup:
             sid=startup_settings.ADMIN_SID,
             fullname=startup_settings.ADMIN_FIRST_NAME,
             email=startup_settings.ADMIN_EMAIL,
-            wallet=WalletCreate(
-                sid=startup_settings.ADMIN_WALLET_SID,
-            ),
             hashed_password=hashed_password,
             created_at=created_at,
             updated_at=created_at,

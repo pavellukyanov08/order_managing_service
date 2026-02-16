@@ -3,6 +3,7 @@ from starlette import status
 
 from app.common.deps import CommonPostgresDep
 from app.common.schemas import UserDTO
+from app.enums import UserStatusEnum
 from app.core.auth import password_manager
 from app.enums import TokenTypeEnum
 from app.schemas import AuthLogin
@@ -22,10 +23,10 @@ async def validate_auth_user(
     )
     if user is None:
         raise unauth_error
-    if not user.is_active:
+    if user.status == UserStatusEnum.BLOCKED:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User inactive",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User has been blocked",
         )
     if user.hashed_password is None or not password_manager.verify_password(
             user_password=user_data.password, hashed_password=user.hashed_password
@@ -42,5 +43,5 @@ def validate_token_type(
         return True
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=f"Invalid token type {payload.get('token_type')} expected {token_type}",
+        detail=f"Invalid token type",
     )

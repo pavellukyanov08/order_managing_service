@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
@@ -8,7 +9,6 @@ from app.schemas import AuthLoginResult, TokenPair, AuthLogin
 from app.settings import api_settings
 from app.deps import CurrentActiveUserDep
 from .deps import AuthServiceDep
-
 
 
 http_bearer = HTTPBearer(auto_error=False)
@@ -44,8 +44,8 @@ async def login_swagger(
 @router.post('/logout', response_model=MessageDTO)
 async def logout(
     service: AuthServiceDep,
-    current_user: CurrentActiveUserDep
+    current_user: CurrentActiveUserDep,
 ) -> MessageDTO:
-    await service.logout(user_data=current_user)
+    await service.logout(current_user=current_user)
 
     return MessageDTO(message="Успешный выход из системы")

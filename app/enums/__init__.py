@@ -1,9 +1,9 @@
-from .user_enum import UserRoleEnum
+from .user_enum import UserStatusEnum
 from .token_enum import TokenTypeEnum
 from .order_status import OrderStatus
 
 __all__ = [
-    "UserRoleEnum",
+    "UserStatusEnum",
     "TokenTypeEnum",
     "OrderStatus",
 ]

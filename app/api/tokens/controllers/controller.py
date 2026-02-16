@@ -12,8 +12,6 @@ from app.schemas import (
 )
 
 
-# http_bearer = HTTPBearer(auto_error=False)
-
 router = APIRouter(
     prefix=api_settings.TOKENS_PREFIX,
 )
@@ -34,4 +32,4 @@ async def refresh_token(
     data: Annotated[RefreshToken, Body(...)]
 ) -> TokenPair:
 
-    return service.refresh_token(data=data)
+    return await service.refresh_token_pair(data=data)

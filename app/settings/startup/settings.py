@@ -8,7 +8,6 @@ class StartupSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="allow")
 
     ADMIN_SID: UUID = Field(..., alias="ADMIN_SID")
-    ADMIN_WALLET_SID: UUID = Field(..., alias="ADMIN_WALLET_SID")
     ADMIN_FIRST_NAME: str = Field(
         ..., min_length=3, max_length=64, alias="ADMIN_FIRST_NAME"
     )

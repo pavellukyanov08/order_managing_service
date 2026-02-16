@@ -1,27 +1,29 @@
 import uvicorn
-import logging
+import logging.config
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 from starlette.middleware import Middleware
-import redis.asyncio as redis
+from redis.asyncio import Redis as RedisClient
 
+from app.utils.logger import init_logging
+from app.core.logger import LOGGING_CONFIG
 from .api.users.controllers import router as user_router
 from .api.auth.controllers import router as auth_router
 from .api.orders.controllers import router as order_router
 from .api.tokens.controllers import router as token_router
 from .settings.redis import redis_settings
-from .core.database import async_engine
-from .utils.logger import LoggerMiddleware
+from .utils.middleware import LoggerMiddleware
 
-logger = logging.getLogger(__name__)
+
+app_logger = init_logging()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting application...")
+    app_logger.info("Starting application...")
 
-    redis_client = redis.Redis(
+    redis_client = RedisClient(
         host=redis_settings.HOST,
         port=redis_settings.PORT,
         username=redis_settings.USER,
@@ -35,8 +37,10 @@ async def lifespan(app: FastAPI):
 
     await redis_client.ping()
     app.state.redis_client = redis_client
+    app_logger.info("✅ Redis connected")
     yield
     await app.state.redis_client.aclose()
+    app_logger.info("Shutdown complete")
 
 
 app = FastAPI(
@@ -57,8 +61,6 @@ app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(order_router)
 app.include_router(token_router)
-
-app.add_middleware(LoggerMiddleware)
 
 
 if __name__ == '__main__':

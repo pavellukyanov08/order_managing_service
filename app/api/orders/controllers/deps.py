@@ -1,17 +1,16 @@
 from typing import Annotated
 from fastapi import Depends
 from app.services.orders import OrderService
-from app.common.deps import CommonPostgresDep
-from app.utils import LoggerDep
+from app.common.deps import CommonPostgresDep, CommonRedisDep
 
 
 def _get_order_service(
-    logger: LoggerDep,
     postgres_adapter: CommonPostgresDep,
+    redis_adapter: CommonRedisDep,
 ) -> OrderService:
     return OrderService(
-        logger=logger,
         postgres_adapter=postgres_adapter,
+        redis_adapter=redis_adapter,
     )
 
 

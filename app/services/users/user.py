@@ -40,7 +40,7 @@ class UserService:
                 sid=user_model.sid,
                 email=user_model.email,
                 fullname=user_model.fullname,
-                role=user_model.role,
+                status=user_model.status,
                 hashed_password=user_model.hashed_password,
                 created_at=created_at,
                 updated_at=created_at,
@@ -65,7 +65,6 @@ class UserService:
     async def get_user(
         self,
         *,
-        current_user: CurrentActiveUserDep,
         user_sid: UUID,
     ) -> UserDTO | None:
         user = await self._postgres_adapter.get_user(user_sid=user_sid)

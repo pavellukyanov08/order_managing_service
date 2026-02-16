@@ -1,6 +1,3 @@
-import logging
-from uuid import UUID
-
 from app.common.adapters import PostgresAdapter
 from app.common.schemas import MessageDTO
 from app.deps import (
@@ -15,11 +12,9 @@ class AuthService:
     def __init__(
         self,
         *,
-        logger: logging.Logger,
         postgres_adapter: PostgresAdapter,
         token_service: TokenService,
     ) -> None:
-        self._logger = logger
         self._postgres_adapter = postgres_adapter
         self._token_service = token_service
 
@@ -37,17 +32,19 @@ class AuthService:
                 sub=user.sid
             )
         )
-        print(f"get_tokens_pair: {get_tokens_pair}")
-        print(f"AuthLoginResult: {AuthLoginResult(tokens=get_tokens_pair)}")
         return AuthLoginResult(
             tokens=get_tokens_pair
         )
 
     async def logout(
-        self, *, user_sid: UUID, data: CurrentActiveUserDep
+        self, *, current_user: CurrentActiveUserDep
     ) -> MessageDTO:
-        user = await self._postgres_adapter.get_user(user_sid=user_sid)
+        user = await self._postgres_adapter.get_user(user_sid=current_user.sid)
         if user is None:
             raise ValueError("Пользователя не существует")
+
+        await self._token_service.revoke_token_pair(
+            token_sub=user.sid
+        )
 
         return MessageDTO(message="OK")
