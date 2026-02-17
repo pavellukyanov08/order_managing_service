@@ -169,10 +169,11 @@ class PostgresAdapter:
             )
             raise
         
-    async def create_order(self, *, order_data: OrderCreate) -> None:
+    async def create_order(self, *, order_data: OrderCreate) -> Order:
         try:
             updated_at = DateTimeManager.get_now_utc()
             order = Order(
+                items=order_data.items,
                 total_price=order_data.total_price,
                 status=order_data.status,
                 user_sid=order_data.user_sid,
@@ -181,6 +182,8 @@ class PostgresAdapter:
             )
             self._postgres_session.add(order)
             self._logger.info("Order has been created: %s", order_data.items)
+            await self._postgres_session.flush()
+            return order
         except Exception as e:
             self._logger.error(
                 "Failed while creating order: item=%s error=%s",

@@ -6,10 +6,17 @@ services:
     ports:
       - "9999:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
     env_file:
-      - .env
+      - .env.docker
+    networks:
+      - order_managing_service_network
 
   db:
     container_name: order_managing_service_db
@@ -21,7 +28,33 @@ services:
     networks:
       - order_managing_service_network
     env_file:
-      - .env
+      - .env.docker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order_managing_service -d order_managing_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: order_managing_service_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-order_managing_service}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-order_managing_service}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - order_managing_service_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   redis:
     image: redis:latest
@@ -33,20 +66,60 @@ services:
       - order_managing_service_data:/data
       - ./redis.conf:/usr/local/etc/redis/redis.conf
       - ./users.acl:/usr/local/etc/redis/users.acl
-    env_file:
-      - .env
     networks:
       - order_managing_service_network
     command: ["redis-server",
-      "--user", "${REDIS_USER}", "on", ">${REDIS_PASSWORD}", "allcommands", "allkeys",
+      "--user", "order_managing_service", "on", ">order_managing_service", "allcommands", "allkeys", "allchannels",
       "--user", "default", "off",
       "--port", "6379",
       "--bind", "0.0.0.0",
       "--protected-mode", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-u", "redis://order_managing_service:order_managing_service@localhost:6379", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  celery_worker:
+    container_name: order_managing_service_celery_worker
+    build:
+      context: .
+    command: celery -A app.core.celery worker --loglevel=info -Q orders
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    networks:
+      - order_managing_service_network
+    restart: always
+
+  consumer:
+    container_name: order_managing_service_consumer
+    build:
+      context: .
+    command: python -m app.consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    env_file:
+      - .env.docker
+    networks:
+      - order_managing_service_network
+    restart: always
 
 volumes:
   order_managing_service_data:
   postgres_data:
+  rabbitmq_data:
 
 networks:
   order_managing_service_network:

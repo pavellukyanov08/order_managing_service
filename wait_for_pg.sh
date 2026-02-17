@@ -1,18 +1,11 @@
 #!/bin/sh
 set -e
 
-host="$1"
+HOST="$1"
+PORT="${2:-5432}"
 
-if [ -z "$host" ]; then
-  echo "❌ POSTGRES_HOST is not set!"
-  exit 1
-fi
-
-echo "⏳ Waiting for PostgreSQL (${host}:5432)..."
-
-until nc -z "$host" 5432; do
+echo "Waiting for PostgreSQL at $HOST:$PORT..."
+while ! nc -z "$HOST" "$PORT"; do
   sleep 1
-  echo "⏳ Waiting for PostgreSQL (${host}:5432)..."
 done
-
-echo "✅ PostgreSQL is up!"
+echo "PostgreSQL is ready."

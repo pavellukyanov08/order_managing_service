@@ -6,7 +6,7 @@ RUN pip install "poetry==$POETRY_VERSION"
 ENV POETRY_VIRTUALENVS_CREATE=false \
     POETRY_NO_INTERACTION=1
 
-WORKDIR /tz-auth
+WORKDIR /order-managing-service
 
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --no-ansi

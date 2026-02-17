@@ -1,6 +1,8 @@
-from .deps import CommonPostgresDep, CommonRedisDep
+from .deps import CommonPostgresDep, CommonRedisDep, CommonRabbitMQDep, CommonCeleryDep
 
 __all__ = [
     "CommonPostgresDep",
-    "CommonRedisDep"
+    "CommonRedisDep",
+    "CommonRabbitMQDep",
+    "CommonCeleryDep",
 ]

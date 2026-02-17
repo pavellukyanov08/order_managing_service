@@ -1,18 +1,18 @@
 import uvicorn
-import logging.config
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 from starlette.middleware import Middleware
 from redis.asyncio import Redis as RedisClient
+import aio_pika
 
 from app.utils.logger import init_logging
-from app.core.logger import LOGGING_CONFIG
 from .api.users.controllers import router as user_router
 from .api.auth.controllers import router as auth_router
 from .api.orders.controllers import router as order_router
 from .api.tokens.controllers import router as token_router
 from .settings.redis import redis_settings
+from .settings.rabbitmq import rabbitmq_settings
 from .utils.middleware import LoggerMiddleware
 
 
@@ -37,8 +37,33 @@ async def lifespan(app: FastAPI):
 
     await redis_client.ping()
     app.state.redis_client = redis_client
-    app_logger.info("✅ Redis connected")
+    app_logger.info("Redis connected")
+
+    rabbitmq_connection = await aio_pika.connect_robust(rabbitmq_settings.url)
+    app_logger.info("RabbitMQ connected")
+
+    from app.common.adapters import RabbitMQAdapter
+    rabbitmq_adapter = RabbitMQAdapter(
+        logger=app_logger,
+        connection=rabbitmq_connection,
+    )
+    await rabbitmq_adapter.setup(
+        exchange_name="orders",
+        queue_name="q.order.new",
+        routing_key="new_order",
+        dlx_exchange_name="dlx.orders",
+        dlq_queue_name="dlq.order.new",
+        dlq_routing_key="dead.order.new",
+    )
+    app.state.rabbitmq_adapter = rabbitmq_adapter
+    app.state.rabbitmq_connection = rabbitmq_connection
+
     yield
+
+    await app.state.rabbitmq_adapter.close()
+    await app.state.rabbitmq_connection.close()
+    app_logger.info("RabbitMQ disconnected")
+
     await app.state.redis_client.aclose()
     app_logger.info("Shutdown complete")
 

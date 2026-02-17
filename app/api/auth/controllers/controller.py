@@ -2,20 +2,18 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer
+from fastapi.security import HTTPBearer
 
 from app.common.schemas import MessageDTO
-from app.schemas import AuthLoginResult, TokenPair, AuthLogin
+from app.schemas import AuthLoginResult, AuthLogin
 from app.settings import api_settings
 from app.deps import CurrentActiveUserDep
 from .deps import AuthServiceDep
 
 
-http_bearer = HTTPBearer(auto_error=False)
-
 router = APIRouter(
     prefix=api_settings.AUTH_USERS_PREFIX,
-    dependencies=[Depends(http_bearer)],
+    dependencies=[Depends(HTTPBearer(auto_error=False))]
 )
 
 
@@ -26,19 +24,6 @@ async def login(
 ) -> AuthLoginResult:
 
     return await service.login(user_data=data)
-
-
-@router.post('/login_swagger', response_model=TokenPair)
-async def login_swagger(
-    service: AuthServiceDep,
-    data: Annotated[OAuth2PasswordRequestForm, Depends()],
-) -> TokenPair:
-    auth_data = AuthLogin(
-        email=data.username,
-        password=data.password
-    )
-
-    return await service.login(user_data=auth_data)
 
 
 @router.post('/logout', response_model=MessageDTO)

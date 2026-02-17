@@ -32,9 +32,7 @@ class AuthService:
                 sub=user.sid
             )
         )
-        return AuthLoginResult(
-            tokens=get_tokens_pair
-        )
+        return AuthLoginResult(tokens=get_tokens_pair)
 
     async def logout(
         self, *, current_user: CurrentActiveUserDep

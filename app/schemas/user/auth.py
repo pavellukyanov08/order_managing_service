@@ -13,4 +13,6 @@ class AuthLogin(CamelDTO, EmailDTO):
 
 
 class AuthLoginResult(BaseModel):
-    tokens: TokenPair | None = None
+    tokens: TokenPair | None = Field(
+        None, description="Auth token pair"
+    )

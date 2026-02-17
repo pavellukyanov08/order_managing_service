@@ -14,11 +14,10 @@ from app.schemas import (
 )
 from app.common.schemas import MessageDTO
 
-http_bearer = HTTPBearer(auto_error=False)
 
 router = APIRouter(
     prefix=api_settings.ORDERS_PREFIX,
-    dependencies=[Depends(http_bearer)],
+    dependencies=[Depends(HTTPBearer(auto_error=False))]
 )
 
 

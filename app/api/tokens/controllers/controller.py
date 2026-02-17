@@ -14,6 +14,7 @@ from app.schemas import (
 
 router = APIRouter(
     prefix=api_settings.TOKENS_PREFIX,
+    dependencies=[Depends(HTTPBearer(auto_error=False))]
 )
 
 

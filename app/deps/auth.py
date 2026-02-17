@@ -13,7 +13,7 @@ from app.enums import TokenTypeEnum, UserStatusEnum
 
 
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl="/auth/login_swagger"
+    tokenUrl="/auth/login"
 )
 
 

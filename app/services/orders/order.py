@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from app.deps import CurrentActiveUserDep
-from app.common.adapters import PostgresAdapter, RedisAdapter
+from app.common.adapters import PostgresAdapter, RedisAdapter, RabbitMQAdapter
 from app.models import Order
 from app.schemas import (
     OrderRead,
@@ -17,9 +17,11 @@ class OrderService:
         *,
         postgres_adapter: PostgresAdapter,
         redis_adapter: RedisAdapter,
+        rabbitmq_adapter: RabbitMQAdapter,
     ) -> None:
         self._postgres_adapter = postgres_adapter
         self._redis_adapter = redis_adapter
+        self._rabbitmq_adapter = rabbitmq_adapter
 
     async def commit_wallet(self) -> None:
         await self._postgres_adapter.commit()
@@ -77,10 +79,15 @@ class OrderService:
         current_user: CurrentActiveUserDep,
     ) -> None:
         order_data = data.model_copy(
-            update={"user_id": current_user.sid},
+            update={"user_sid": current_user.sid},
         )
-        await self._postgres_adapter.create_order(order_data=order_data)
+        order = await self._postgres_adapter.create_order(order_data=order_data)
         await self._postgres_adapter.commit()
+        await self._rabbitmq_adapter.publish(
+            exchange_name="orders",
+            routing_key="new_order",
+            body={"order_id": order.id},
+        )
 
     async def update_order(
         self,

@@ -13,7 +13,7 @@ from app.common.schemas import UserDTO, MessageDTO
 
 router = APIRouter(
     prefix=api_settings.USERS_PREFIX,
-    dependencies=[Depends(HTTPBearer(auto_error=False))],
+    dependencies=[Depends(HTTPBearer(auto_error=False))]
 )
 
 
