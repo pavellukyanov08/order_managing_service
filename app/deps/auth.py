@@ -1,14 +1,12 @@
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jwt.exceptions import InvalidTokenError
 from starlette import status
 
 from app.common.schemas import UserDTO
-from app.core.auth import jwt_auth
 from app.common.deps import CommonPostgresDep
-from .validation import validate_token_type
+from app.api.tokens.controllers.deps import TokenServiceDep
 from app.enums import TokenTypeEnum, UserStatusEnum
 
 
@@ -17,34 +15,17 @@ oauth2_scheme = OAuth2PasswordBearer(
 )
 
 
-def get_current_token_payload(
-    token: str = Depends(oauth2_scheme),
-) -> dict:
-    try:
-        payload = jwt_auth.decode_token(token=token)
-    except InvalidTokenError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token error: {e}",
-        )
-    return payload
-
-
 async def get_current_active_user(
     postgres: CommonPostgresDep,
-    payload: dict[str, Any] = Depends(get_current_token_payload),
+    token_service: TokenServiceDep,
+    token: str = Depends(oauth2_scheme),
 ) -> UserDTO:
-    validate_token_type(
-        payload=payload,
+    token_model = await token_service.check_token(
+        token=token,
         token_type=TokenTypeEnum.ACCESS,
     )
-    user_sid = payload.get('token_sub')
-    if not user_sid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
-    user = await postgres.get_user(user_sid=user_sid)
+
+    user = await postgres.get_user(user_sid=token_model.token_sub)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

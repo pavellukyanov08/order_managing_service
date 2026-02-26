@@ -9,8 +9,7 @@ from app.settings import rabbitmq_settings
 from app.api.orders.tasks.order import process_order
 
 
-logger = logging.getLogger("consumer")
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("app_logger")
 
 MAX_RETRIES = 3
 
@@ -56,38 +55,7 @@ async def main() -> None:
         channel = await connection.channel()
         await channel.set_qos(prefetch_count=1)
 
-        exchange = await channel.declare_exchange(
-            "orders",
-            aio_pika.ExchangeType.DIRECT,
-            durable=True,
-        )
-
-        dlx = await channel.declare_exchange(
-            "dlx.orders",
-            aio_pika.ExchangeType.DIRECT,
-            durable=True,
-        )
-
-        dlq = await channel.declare_queue(
-            "dlq.order.new",
-            durable=True,
-            arguments={
-                "x-message-ttl": 30000,
-                "x-dead-letter-exchange": "orders",
-                "x-dead-letter-routing-key": "new_order",
-            },
-        )
-        await dlq.bind(dlx, routing_key="dead.order.new")
-
-        queue = await channel.declare_queue(
-            "q.order.new",
-            durable=True,
-            arguments={
-                "x-dead-letter-exchange": "dlx.orders",
-                "x-dead-letter-routing-key": "dead.order.new",
-            },
-        )
-        await queue.bind(exchange, routing_key="new_order")
+        queue = await channel.declare_queue("q.order.new", passive=True)
 
         await queue.consume(on_new_order)
         logger.info("Consuming from queue=q.order.new (DLX enabled, max_retries=%s)", MAX_RETRIES)
@@ -96,4 +64,6 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    from app.utils.logger import init_logging
+    init_logging()
     asyncio.run(main())

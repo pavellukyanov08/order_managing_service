@@ -89,4 +89,4 @@ app.include_router(token_router)
 
 
 if __name__ == '__main__':
-    uvicorn.run("main:proj_app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

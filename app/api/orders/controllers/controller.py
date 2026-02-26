@@ -24,23 +24,25 @@ router = APIRouter(
 @router.get('/{orderId}', response_model=OrderRead)
 async def get_order(
     service: OrderServiceDep,
+    current_user: CurrentActiveUserDep,
     order_id: Annotated[int, Path(..., alias="orderId")]
 ) -> OrderRead:
     """
     Get order by ID
     """
-    return await service.get_order_by_id(order_id=order_id)
+    return await service.get_order_by_id(current_user=current_user, order_id=order_id)
 
 
 @router.get('/user/{userSid}', response_model=list[OrderRead])
 async def get_orders_by_user(
     service: OrderServiceDep,
+    current_user: CurrentActiveUserDep,
     user_sid: Annotated[UUID, Path(..., alias="userSid")]
 ) -> list[OrderRead]:
     """
     Get orders by user
     """
-    return await service.get_orders_by_user(user_sid=user_sid)
+    return await service.get_orders_by_user(current_user=current_user, user_sid=user_sid)
 
 
 @router.post('/create_order', response_model=MessageDTO)
@@ -59,16 +61,17 @@ async def create_order(
 @router.patch('/{order_id}/', response_model=MessageDTO)
 async def update_order(
     service: OrderServiceDep,
-    updated_order: Annotated[OrderUpdate, Body(...)],
+    order_id: Annotated[int, Path(..., alias="orderId")],
+    data: Annotated[OrderUpdate, Body(...)],
+    current_user: CurrentActiveUserDep,
 ) -> MessageDTO:
     """
     Update the order
     """
-
-    await service.update_order(data=updated_order)
+    await service.update_order(
+        order_id=order_id,
+        data=data,
+        current_user=current_user
+    )
     return MessageDTO(message="Заказ обновлен")
-
-
-
-
 

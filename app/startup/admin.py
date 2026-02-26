@@ -52,6 +52,6 @@ class AdminStartup:
         await self._postgres_adapter.commit()
 
         self._logger.info(
-            "Admin %s has been successfully created %s",
+            "Admin %s has been successfully created",
             startup_settings.ADMIN_EMAIL,
         )

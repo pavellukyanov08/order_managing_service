@@ -5,3 +5,8 @@ from enum import StrEnum, unique
 class UserStatusEnum(StrEnum):
     ACTIVE = "active"
     BLOCKED = "blocked"
+
+
+@unique
+class UserRoleEnum(StrEnum):
+    ADMIN = "admin"

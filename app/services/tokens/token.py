@@ -55,26 +55,12 @@ class TokenService:
             created_at=token_payload.created_at,
         )
 
-    # def _get_token_payload(
-    #     self, *, token: str
-    # ) -> TokenPayload:
-    #     try:
-    #         token_payload = jwt_auth.decode_token(token=token)
-    #         return TokenPayload.model_validate(obj=token_payload)
-    #     except Exception as e:
-    #         self._logger.error("Failed to receive token payload: error=%s", e)
-    #         raise
-
     async def check_token(
         self,
         *,
         token: str,
         token_type: TokenTypeEnum,
     ) -> Token:
-        """
-        Проверяет токен и возвращает модель токена из Redis.
-        Использует ту же логику, что и в deps/auth.py
-        """
         try:
             decoded_payload = jwt_auth.decode_token(token=token)
         except Exception as e:
@@ -84,14 +70,12 @@ class TokenService:
                 detail="Invalid token"
             ))
         
-        # Проверяем тип токена
         if decoded_payload.get('token_type') != token_type:
             raise self._token_types_errors.get(token_type, HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type"
             ))
         
-        # Получаем jti из payload
         token_sid = decoded_payload.get('jti')
         if not token_sid:
             raise self._token_types_errors.get(token_type, HTTPException(
@@ -99,7 +83,6 @@ class TokenService:
                 detail="Invalid token payload"
             ))
         
-        # Проверяем токен в Redis
         token_model = await self._redis_adapter.get_token(token_sid=token_sid)
         if token_model is None:
             raise self._token_types_errors.get(token_type, HTTPException(
@@ -107,7 +90,6 @@ class TokenService:
                 detail="Token not found or expired"
             ))
         
-        # Проверяем хеш токена
         if token_model.hash != get_hash_sha256(data=token):
             raise self._token_types_errors.get(token_type, HTTPException(
                 status_code=HTTP_401_UNAUTHORIZED,

@@ -13,7 +13,8 @@ class RabbitMQSettings(BaseSettings):
 
     @property
     def url(self) -> str:
-        vhost = self.VHOST if self.VHOST != "/" else ""
+        from urllib.parse import quote
+        vhost = quote(self.VHOST, safe="")
         return f"amqp://{self.USER}:{self.PASSWORD}@{self.HOST}:{self.PORT}/{vhost}"
 
 

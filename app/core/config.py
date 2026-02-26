@@ -13,11 +13,6 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASS: str
     SECRET_KEY: str
-    redis_host: str
-    redis_port: int
-    redis_user: str
-    redis_password: str
-
 
     @property
     def async_database_url(self) -> str:

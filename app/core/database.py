@@ -10,7 +10,7 @@ SYNC_DATABASE_URL = settings.sync_database_url
 
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
-    echo=True,
+    echo=False,
     pool_pre_ping=True,
     pool_recycle=300,
 )
@@ -20,7 +20,7 @@ AsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession
 )
 
-sync_engine = create_engine(SYNC_DATABASE_URL, echo=True)
+sync_engine = create_engine(SYNC_DATABASE_URL, echo=False)
 SyncSessionLocal = sessionmaker(
     bind=sync_engine,
     autocommit=False,

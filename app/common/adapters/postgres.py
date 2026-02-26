@@ -1,4 +1,3 @@
-from typing import cast
 from uuid import UUID
 
 from pydantic import EmailStr
@@ -45,20 +44,6 @@ class PostgresAdapter:
         except Exception as e:
             self._logger.error("Error when cancelling changes: %s", e)
             raise
-
-    @staticmethod
-    def _create_user_model(
-        *,
-        user_alchemy_model: User,
-    ) -> UserDTO:
-        return UserDTO(
-            sid=user_alchemy_model.sid,
-            email=cast(EmailStr, user_alchemy_model.email),
-            fullname=user_alchemy_model.fullname,
-            hashed_password=user_alchemy_model.hashed_password,
-            created_at=user_alchemy_model.created_at,
-            updated_at=user_alchemy_model.created_at,
-        )
 
     async def _get_user_model(
         self,
@@ -169,25 +154,27 @@ class PostgresAdapter:
             )
             raise
         
-    async def create_order(self, *, order_data: OrderCreate) -> Order:
+    async def create_order(
+        self,
+        *,
+        order_data: OrderCreate,
+    ) -> Order:
         try:
-            updated_at = DateTimeManager.get_now_utc()
+            now = DateTimeManager.get_now_utc()
             order = Order(
                 items=order_data.items,
                 total_price=order_data.total_price,
                 status=order_data.status,
                 user_sid=order_data.user_sid,
-                created_at=order_data.created_at,
-                updated_at=updated_at,
+                created_at=now,
+                updated_at=now,
             )
             self._postgres_session.add(order)
-            self._logger.info("Order has been created: %s", order_data.items)
-            await self._postgres_session.flush()
+            self._logger.info("Order has been created")
             return order
         except Exception as e:
             self._logger.error(
-                "Failed while creating order: item=%s error=%s",
-                order_data.items,
+                "Failed while creating order, error=%s",
                 e,
             )
             await self.rollback()
@@ -196,19 +183,20 @@ class PostgresAdapter:
     async def update_order(
         self,
         *,
-        updated_order: OrderUpdate,
+        order_id: int,
+        data: OrderUpdate,
     ) -> None:
         try:
-            order = await self._postgres_session.execute(
+            await self._postgres_session.execute(
                 update(Order)
-                .where(Order.id == updated_order.id)
+                .where(Order.id == order_id)
                 .values(
-                    status=updated_order.status,
-                    updated_at=updated_order.updated_at,
+                    status=data.status,
+                    updated_at=DateTimeManager.get_now_utc(),
                 )
             )
             self._logger.info("Order has been updated: %s",
-                            updated_order.id
+                data.id
             )
         except SQLAlchemyError as e:
             self._logger.info("Error while updating Order: %s", e)

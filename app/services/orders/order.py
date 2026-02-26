@@ -1,7 +1,7 @@
 from uuid import UUID
 from fastapi import HTTPException
 
-from app.deps import CurrentActiveUserDep
+from app.deps import CurrentActiveUserDep, check_user_admin
 from app.common.adapters import PostgresAdapter, RedisAdapter, RabbitMQAdapter
 from app.models import Order
 from app.schemas import (
@@ -23,7 +23,7 @@ class OrderService:
         self._redis_adapter = redis_adapter
         self._rabbitmq_adapter = rabbitmq_adapter
 
-    async def commit_wallet(self) -> None:
+    async def commit_order(self) -> None:
         await self._postgres_adapter.commit()
 
     @staticmethod
@@ -45,7 +45,9 @@ class OrderService:
         self,
         *,
         order_id: int,
+        current_user: CurrentActiveUserDep,
     ) -> OrderRead:
+        await check_user_admin(user_sid=current_user.sid, postgres=self._postgres_adapter)
         redis_order = await self._redis_adapter.get_order(order_id=order_id)
         if redis_order:
             return redis_order
@@ -66,10 +68,10 @@ class OrderService:
         self,
         *,
         user_sid: UUID,
+        current_user: CurrentActiveUserDep,
     ) -> list[OrderRead]:
+        await check_user_admin(user_sid=current_user.sid, postgres=self._postgres_adapter)
         orders = await self._postgres_adapter.get_orders_by_user(user_sid=user_sid)
-        if not orders:
-            raise HTTPException(status_code=404, detail="No orders found")
         return [OrderRead.model_validate(order, from_attributes=True) for order in orders]
 
     async def create_order(
@@ -78,10 +80,11 @@ class OrderService:
         data: OrderCreate,
         current_user: CurrentActiveUserDep,
     ) -> None:
-        order_data = data.model_copy(
-            update={"user_sid": current_user.sid},
+        order_data = data.model_copy(update={"user_sid": current_user.sid})
+
+        order = await self._postgres_adapter.create_order(
+            order_data=order_data,
         )
-        order = await self._postgres_adapter.create_order(order_data=order_data)
         await self._postgres_adapter.commit()
         await self._rabbitmq_adapter.publish(
             exchange_name="orders",
@@ -92,22 +95,28 @@ class OrderService:
     async def update_order(
         self,
         *,
+        order_id: int,
         data: OrderUpdate,
+        current_user: CurrentActiveUserDep,
     ) -> None:
-        order = await self._postgres_adapter.get_order(order_id=data.id)
+        order = await self._postgres_adapter.get_order(order_id=order_id)
         if order is None:
             raise HTTPException(
                 status_code=404,
                 detail="Order does not exist",
             )
-        await self._postgres_adapter.update_order(
-            updated_order=data,
-        )
-        updated_order = await self._postgres_adapter.get_order(order_id=data.id)
-        await self._postgres_adapter.commit()
-        await self._redis_adapter.set_order(
-            order_id=data.id,
-            order=OrderRead.model_validate(updated_order.__dict__)
-        )
+        if order.user_sid == current_user.sid:
+            await self._postgres_adapter.update_order(
+                order_id=order_id,
+                data=data,
+            )
+            await self._postgres_adapter.commit()
+            updated_order = OrderRead.model_validate(
+                {**order.__dict__, "status": data.status}
+            )
+            await self._redis_adapter.set_order(
+                order_id=order_id,
+                order=updated_order,
+            )
 
 

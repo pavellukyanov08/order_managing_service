@@ -17,7 +17,7 @@ class RedisAdapter:
         self,
         order_id: int
     ) -> OrderRead | None:
-        order_key = f"order: {order_id}"
+        order_key = f"order:{order_id}"
 
         try:
             order_json = await self._redis_client.get(name=order_key)

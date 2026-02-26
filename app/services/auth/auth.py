@@ -37,12 +37,7 @@ class AuthService:
     async def logout(
         self, *, current_user: CurrentActiveUserDep
     ) -> MessageDTO:
-        user = await self._postgres_adapter.get_user(user_sid=current_user.sid)
-        if user is None:
-            raise ValueError("Пользователя не существует")
-
         await self._token_service.revoke_token_pair(
-            token_sub=user.sid
+            token_sub=current_user.sid
         )
-
         return MessageDTO(message="OK")

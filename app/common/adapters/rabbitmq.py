@@ -40,7 +40,7 @@ class RabbitMQAdapter:
 
         queue_arguments: dict = {}
 
-        if dlx_exchange_name and dlq_routing_key:
+        if dlx_exchange_name:
             dlx = await self._channel.declare_exchange(
                 dlx_exchange_name,
                 aio_pika.ExchangeType.DIRECT,
@@ -48,20 +48,22 @@ class RabbitMQAdapter:
             )
             self._exchanges[dlx_exchange_name] = dlx
 
-            if dlq_queue_name:
-                dlq = await self._channel.declare_queue(
-                    dlq_queue_name,
-                    durable=True,
-                    arguments={
-                        "x-message-ttl": dlq_ttl,
-                        "x-dead-letter-exchange": exchange_name,
-                        "x-dead-letter-routing-key": routing_key,
-                    },
-                )
-                await dlq.bind(dlx, routing_key=dlq_routing_key)
+            _dlq_queue_name = dlq_queue_name or f"{queue_name}_dlq"
+            _dlq_routing_key = dlq_routing_key or routing_key
+
+            dlq = await self._channel.declare_queue(
+                _dlq_queue_name,
+                durable=True,
+                arguments={
+                    "x-message-ttl": dlq_ttl,
+                    "x-dead-letter-exchange": exchange_name,
+                    "x-dead-letter-routing-key": _dlq_routing_key,
+                },
+            )
+            await dlq.bind(dlx, routing_key=_dlq_routing_key)
 
             queue_arguments["x-dead-letter-exchange"] = dlx_exchange_name
-            queue_arguments["x-dead-letter-routing-key"] = dlq_routing_key
+            queue_arguments["x-dead-letter-routing-key"] = _dlq_routing_key
 
         queue = await self._channel.declare_queue(
             queue_name,
